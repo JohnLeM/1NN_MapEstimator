@@ -1,6 +1,9 @@
 import ot
 import numpy as np
 from sklearn.neighbors import NearestNeighbors
+import codpy.core as core
+from codpy.kernel import Kernel
+
 
 #### 1-Nearest Neighbor Estimator
 def LoopThruG(G,n,thr=1e-8):
@@ -36,3 +39,13 @@ def NNEstimator(x,source,target,G0,algo='brute'):
       target_1nn[i] = target[ind_]
 
     return target_1nn
+
+def COT(x,source,target):
+    G0 = OT_0(source,target)
+    return NNEstimator(x,source,target,G0)
+   
+
+
+def codpy_OT(x,source,target):
+    # return Kernel(set_kernel=lambda :core.kernel_helper2("gaussian","standardmin",0,1e-9)).map(source,target,distance="norm22")(x)
+    return Kernel(set_kernel=lambda :core.kernel_helper2("maternnorm","standardmean",0,1e-2)).map(source,target,distance="norm22")(x)
