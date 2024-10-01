@@ -1,8 +1,12 @@
 import ot
+import ott
 import numpy as np
 from sklearn.neighbors import NearestNeighbors
 import codpy.core as core
 from codpy.kernel import Kernel
+from ott.geometry import pointcloud
+from ott.problems.linear import linear_problem
+from ott.solvers.linear import sinkhorn
 
 
 #### 1-Nearest Neighbor Estimator
@@ -50,3 +54,22 @@ def codpy_OT(x,source,target):
     # set_kernel=lambda :core.kernel_helper2("maternnorm","standardmean",0,1e-9)
     set_kernel=lambda :core.kernel_helper2("tensornorm","unitcube",0,1e-9)
     return Kernel(set_kernel=set_kernel).map(source,target,distance="norm22")(x)
+
+def ott_transport(source_mc, source, target, epsilon=1e-3, max_iters=1000):
+    
+    # the point cloud geometry
+    if epsilon is None:
+       geom = pointcloud.PointCloud(source, target)
+    else:
+      geom = pointcloud.PointCloud(source, target, epsilon = epsilon)
+    
+    # solution of the OT problem
+    problem = linear_problem.LinearProblem(geom)
+    output = sinkhorn.Sinkhorn(max_iterations=max_iters)(problem)
+    
+    dual_potentials = output.to_dual_potentials()
+
+    # transport_map#(out-of-sample points)
+    transported_points = dual_potentials.transport(source_mc)
+    
+    return transported_points
