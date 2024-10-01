@@ -47,5 +47,6 @@ def COT(x,source,target):
 
 
 def codpy_OT(x,source,target):
-    # return Kernel(set_kernel=lambda :core.kernel_helper2("gaussian","standardmin",0,1e-9)).map(source,target,distance="norm22")(x)
-    return Kernel(set_kernel=lambda :core.kernel_helper2("maternnorm","standardmean",0,1e-2)).map(source,target,distance="norm22")(x)
+    # set_kernel=lambda :core.kernel_helper2("maternnorm","standardmean",0,1e-9)
+    set_kernel=lambda :core.kernel_helper2("tensornorm","unitcube",0,1e-9)
+    return Kernel(set_kernel=set_kernel).map(source,target,distance="norm22")(x)
