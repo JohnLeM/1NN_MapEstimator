@@ -44,18 +44,18 @@ def NNEstimator(x,source,target,G0,algo='brute'):
 
     return target_1nn
 
-def COT(x,source,target):
+def POT(x,source,target):
     G0 = OT_0(source,target)
     return NNEstimator(x,source,target,G0)
    
 
 
-def codpy_OT(x,source,target):
+def COT(x,source,target):
     set_kernel=lambda :core.kernel_helper2("maternnorm","standardmean",0,1e-9)
     # set_kernel=lambda :core.kernel_helper2("tensornorm","unitcube",0,1e-9)
     return Kernel(set_kernel=set_kernel).map(source,target,distance="norm22")(x)
 
-def ott_transport(source_mc, source, target, epsilon=1e-3, max_iters=1000):
+def OTT(source_mc, source, target, epsilon=None, max_iters=1000):
     
     # the point cloud geometry
     if epsilon is None:

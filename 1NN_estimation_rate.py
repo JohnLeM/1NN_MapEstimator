@@ -180,12 +180,12 @@ def compare_methods(files, Ds, Ns, data, save=False):
             plt.xlabel('$n$ samples')
             plt.ylabel('Execution Time')
 
-    multi_plot(list(enumerate(Ds)),fun_plot=plot_MSE)
+    multi_plot(list(enumerate(Ds)),fun_plot=plot_MSE,mp_max_items=-1)
     plt.legend()
+    plt.show()
     if save: plt.savefig(f'Error_{data}.pdf')
-    else: plt.show()
 
-    multi_plot(list(enumerate(Ds)),fun_plot=plot_time)
+    multi_plot(list(enumerate(Ds)),fun_plot=plot_time,mp_max_items=-1)
     plt.legend()
     plt.show()
     if save: plt.savefig(f'Time_{data}.pdf')
@@ -198,15 +198,15 @@ if __name__ == "__main__":
 
     # Ds = [2,5,10]
     # Ns = [2**n for n in range(6,11)]
-    Ds = [2,5,10,20]
+    Ds = [2,5,10,20,40]
     Ns = [2**n for n in range(6,11)]
     data = 'unif_exp'
 
     # DataViz(sample_uniform,OT_exp,500,2,N_sampling=500,fun = codpy_OT)
 
-    file_ott = nn_estimation_rate(sample_uniform, OT_exp, Ns, Ds, data=data, fun=ott_transport, method_name="OTT")
-    file_cot = nn_estimation_rate(sample_uniform, OT_exp, Ns, Ds, data=data, fun=COT, method_name="POT")
-    file_codpy = nn_estimation_rate(sample_uniform, OT_exp, Ns, Ds, data=data, fun=codpy_OT,  method_name="COT")
+    # file_OTT = nn_estimation_rate(sample_uniform, OT_exp, Ns, Ds, data=data, fun=OTT, method_name="OTT")
+    # file_POT = nn_estimation_rate(sample_uniform, OT_exp, Ns, Ds, data=data, fun=POT, numTrials=1,method_name="POT")
+    # file_COT = nn_estimation_rate(sample_uniform, OT_exp, Ns, Ds, data=data, fun=COT,  method_name="COT")
 
 
     files = files_indir(os.path.dirname(os.path.realpath(__file__)),".pkl")
