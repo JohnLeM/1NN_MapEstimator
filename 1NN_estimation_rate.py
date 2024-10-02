@@ -1,6 +1,9 @@
 import numpy as np
 import time
-
+from codpy.plot_utils import multi_plot
+from codpy.file import files_indir
+import os,sys
+import pandas as pd
 import pickle
 import matplotlib.pyplot as plt
 import statsmodels.api as sm
@@ -11,7 +14,7 @@ from NN_map import *
 def nn_estimation_rate(sampling_function, mapfnt, Ns, Ds, data, numTrials=10, N_sampling=10000, fun=None, method_name="COT"):
     
     L2_NN_Error = np.zeros((len(Ds), len(Ns), numTrials))
-    tstart = time.time()
+    times = {"data":[]}
 
     for k, d in enumerate(Ds):
         for i, n in enumerate(Ns):
@@ -27,13 +30,16 @@ def nn_estimation_rate(sampling_function, mapfnt, Ns, Ds, data, numTrials=10, N_
                 ot_t = mapfnt(source_mc)
 
                 # Compute the transport using the specified method
+                tic = time.time()
                 tnn = fun(source_mc, source, target)
+                toc = time.time()
+                times['data'].append([d,n,numTrials,toc-tic])
 
                 # Compute the L2 error
                 L2_NN_Error[k, i, t] = (np.linalg.norm((tnn - ot_t), axis=1) ** 2).mean()
 
                 if (t + 1) % numTrials == 0:
-                    print('d=%f, n=%d, trials: %d/%d, time=%d' % (d, n, t + 1, numTrials, time.time() - tstart))
+                    print('d=%f, n=%d, trials: %d/%d, time=%f' % (d, n, t + 1, numTrials, toc-tic))
 
         print('==== Done with dimension %f ====' % d)
 
@@ -47,7 +53,8 @@ def nn_estimation_rate(sampling_function, mapfnt, Ns, Ds, data, numTrials=10, N_
         'Ns': Ns,
         'numTrials': numTrials,
         'L2_NN_Error': L2_NN_Error,
-        'data': data
+        'data': data,
+        'times': times
     }
     
     with open(pkl_title, 'wb') as output:
@@ -115,41 +122,73 @@ def DataViz(sampling_function,mapfnt,N,D,N_sampling=10000,fun = COT):
 
 
 
-def compare_methods(files, methods, Ds, Ns, data, save=False):
+def compare_methods(files, Ds, Ns, data, save=False):
 
     colors = ['r', 'b', 'g']
     linestyles = ['-', '--', '-.']
 
-    for dim_idx, d in enumerate(Ds):
-        plt.figure(figsize=(6, 5))
-        print(f'Estimation rates for dimension d={d}')
-        
-        for method_idx, file in enumerate(files):
+    def plot_MSE(id_d,ax=None,**kwargs):
+        id,d = id_d[0], id_d[1]
+        figsize = kwargs.get('figsize',(4, 4))
+        if ax == None: fig, ax = plt.subplots(figsize=figsize)
+        for method_id,file in enumerate(files):
             with open(file, 'rb') as f:
                 file_data = pickle.load(f)
 
             l2_nn = file_data['L2_NN_Error']
-            l2nn_d = l2_nn[dim_idx]
+            l2nn_d = l2_nn[id]
+
+            file_name = os.path.basename(file)
 
             ynn_means = np.mean(l2nn_d, axis=-1)
             ynn_std = np.std(l2nn_d, axis=-1)
 
             x_ = sm.add_constant(np.log(np.array(Ns)))
             modelnn = sm.OLS(np.log(ynn_means), x_).fit()
-            print(f'{methods[method_idx]}, d={d}, rate={modelnn.params[1]}')
+            print(f'{file_name}, d={d}, rate={modelnn.params[1]}')
 
-            plt.loglog(Ns, ynn_means, label=f'{methods[method_idx]}', color=colors[method_idx], linestyle=linestyles[method_idx])
-            plt.errorbar(Ns, ynn_means, yerr=ynn_std, color=colors[method_idx], linestyle=linestyles[method_idx])
+            plt.loglog(Ns, ynn_means, label=f'{file_name}', color=colors[method_id], linestyle=linestyles[method_id])
+            plt.errorbar(Ns, ynn_means, yerr=ynn_std, color=colors[method_id], linestyle=linestyles[method_id])
+            plt.title(kwargs.get("title",'d='+str(d)))
+            plt.xlabel('$n$ samples')
+            plt.ylabel('Mean Squared Error')
 
-        plt.legend()
-        plt.xlabel('$n$ samples')
-        plt.ylabel('Mean Squared Error')
-        plt.title(f'Comparison of Methods for d={d}')
-        
-        if save:
-            plt.savefig(f'comparison_methods_d{d}_{data}.pdf')
-        else:
-            plt.show()
+    def plot_time(id_d,ax=None,**kwargs):
+        id,d = id_d[0], id_d[1]
+        figsize = kwargs.get('figsize',(4, 4))
+        if ax == None: fig, ax = plt.subplots(figsize=figsize)
+        for method_id,file in enumerate(files):
+            with open(file, 'rb') as f:
+                file_data = pickle.load(f)
+
+            l2_nn = pd.DataFrame(data = file_data['times']['data'], columns = ["D","N","K","times"])
+            l2nn_d = (l2_nn[l2_nn["D"]==d]["times"]).to_numpy()
+            l2nn_d = l2nn_d.reshape([len(Ns),int(l2nn_d.shape[0] / len(Ns))])
+
+            file_name = os.path.basename(file)
+
+            ynn_means = np.mean(l2nn_d, axis=-1)
+            ynn_std = np.std(l2nn_d, axis=-1)
+
+            x_ = sm.add_constant(np.log(np.array(Ns)))
+            modelnn = sm.OLS(np.log(ynn_means), x_).fit()
+            print(f'{file_name}, d={d}, rate={modelnn.params[1]}')
+
+            plt.loglog(Ns, ynn_means, label=f'{file_name}', color=colors[method_id], linestyle=linestyles[method_id])
+            plt.errorbar(Ns, ynn_means, yerr=ynn_std, color=colors[method_id], linestyle=linestyles[method_id])
+            plt.title(kwargs.get("title",'d='+str(d)))
+            plt.xlabel('$n$ samples')
+            plt.ylabel('Execution Time')
+
+    multi_plot(list(enumerate(Ds)),fun_plot=plot_MSE)
+    plt.legend()
+    if save: plt.savefig(f'Error_{data}.pdf')
+    else: plt.show()
+
+    multi_plot(list(enumerate(Ds)),fun_plot=plot_time)
+    plt.legend()
+    plt.show()
+    if save: plt.savefig(f'Time_{data}.pdf')
 
 
 if __name__ == "__main__":
@@ -157,23 +196,28 @@ if __name__ == "__main__":
     ### P = Unif(-1,1)^d
     ### T_0(x) = exp(x) coordinate-wise
 
-    Ds = [2,5,10]
+    # Ds = [2,5,10]
+    # Ns = [2**n for n in range(6,11)]
+    Ds = [2,5,10,20]
     Ns = [2**n for n in range(6,11)]
     data = 'unif_exp'
 
-    DataViz(sample_uniform,OT_exp,500,2,N_sampling=500,fun = codpy_OT)
+    # DataViz(sample_uniform,OT_exp,500,2,N_sampling=500,fun = codpy_OT)
 
     file_ott = nn_estimation_rate(sample_uniform, OT_exp, Ns, Ds, data=data, fun=ott_transport, method_name="OTT")
-    file_cot = nn_estimation_rate(sample_uniform, OT_exp, Ns, Ds, data=data, fun=COT, method_name="COT")
-    file_codpy = nn_estimation_rate(sample_uniform, OT_exp, Ns, Ds, data=data, fun=codpy_OT,  method_name="Codpy_OT")
+    file_cot = nn_estimation_rate(sample_uniform, OT_exp, Ns, Ds, data=data, fun=COT, method_name="POT")
+    file_codpy = nn_estimation_rate(sample_uniform, OT_exp, Ns, Ds, data=data, fun=codpy_OT,  method_name="COT")
+
+
+    files = files_indir(os.path.dirname(os.path.realpath(__file__)),".pkl")
+
 
 
     compare_methods(
-        files=[file_ott, file_cot, file_codpy],
-        methods=['OTT Transport', 'COT', 'Codpy_OT'],
-        Ds=[2, 5, 10],
+        files=files,
+        Ds=Ds,
         Ns=Ns,
         data=data,
-        save=False
+        save=True
     )
     pass

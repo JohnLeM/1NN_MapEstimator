@@ -51,8 +51,8 @@ def COT(x,source,target):
 
 
 def codpy_OT(x,source,target):
-    # set_kernel=lambda :core.kernel_helper2("maternnorm","standardmean",0,1e-9)
-    set_kernel=lambda :core.kernel_helper2("tensornorm","unitcube",0,1e-9)
+    set_kernel=lambda :core.kernel_helper2("maternnorm","standardmean",0,1e-9)
+    # set_kernel=lambda :core.kernel_helper2("tensornorm","unitcube",0,1e-9)
     return Kernel(set_kernel=set_kernel).map(source,target,distance="norm22")(x)
 
 def ott_transport(source_mc, source, target, epsilon=1e-3, max_iters=1000):
