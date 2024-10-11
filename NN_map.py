@@ -51,9 +51,11 @@ def POT(x,source,target):
 
 
 def COT(x,source,target):
-    set_kernel=lambda :core.kernel_helper2("maternnorm","standardmean",0,1e-9)
-    # set_kernel=lambda :core.kernel_helper2("tensornorm","unitcube",0,1e-9)
-    return Kernel(set_kernel=set_kernel).map(source,target,distance="norm22")(x)
+    # core.set_num_threads(1)
+    return Kernel(set_kernel=core.kernel_setter("maternnorm","standardmean",0,1e-9)).map(source,target,distance="norm22")(x)
+
+def COT_parallel(x,source,target):
+    return Kernel(set_kernel=core.kernel_setter("maternnorm","standardmean",0,1e-9)).map(source,target,distance="norm22",sub=True)(x)
 
 def OTT(source_mc, source, target, epsilon=None, max_iters=1000):
     

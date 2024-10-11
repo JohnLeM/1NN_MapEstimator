@@ -1,5 +1,6 @@
 import numpy as np
 import time
+import codpy.core as core
 from codpy.plot_utils import multi_plot
 from codpy.file import files_indir
 import os,sys
@@ -10,6 +11,7 @@ import statsmodels.api as sm
 
 from data_gen import *
 from NN_map import *
+os.environ["OMP_NUM_THREADS"] = "16"
 
 def nn_estimation_rate(sampling_function, mapfnt, Ns, Ds, data, numTrials=10, N_sampling=10000, fun=None, method_name="COT"):
     
@@ -39,7 +41,7 @@ def nn_estimation_rate(sampling_function, mapfnt, Ns, Ds, data, numTrials=10, N_
                 L2_NN_Error[k, i, t] = (np.linalg.norm((tnn - ot_t), axis=1) ** 2).mean()
 
                 if (t + 1) % numTrials == 0:
-                    print('d=%f, n=%d, trials: %d/%d, time=%f' % (d, n, t + 1, numTrials, toc-tic))
+                    print('method:'+method_name,'d=%f, n=%d, trials: %d/%d, time=%f' % (d, n, t + 1, numTrials, toc-tic))
 
         print('==== Done with dimension %f ====' % d)
 
@@ -124,8 +126,8 @@ def DataViz(sampling_function,mapfnt,N,D,N_sampling=10000,fun = COT):
 
 def compare_methods(files, Ds, Ns, data, save=False):
 
-    colors = ['r', 'b', 'g']
-    linestyles = ['-', '--', '-.']
+    colors = ['r', 'b', 'g','c']
+    linestyles = ['-', '--', '-.',':']
 
     def plot_MSE(id_d,ax=None,**kwargs):
         id,d = id_d[0], id_d[1]
@@ -192,21 +194,22 @@ def compare_methods(files, Ds, Ns, data, save=False):
 
 
 if __name__ == "__main__":
+    # core.set_verbose(False)
     ### Example 1
     ### P = Unif(-1,1)^d
     ### T_0(x) = exp(x) coordinate-wise
 
-    # Ds = [2,5,10]
-    # Ns = [2**n for n in range(6,11)]
-    Ds = [2,5,10,20,40]
-    Ns = [2**n for n in range(6,11)]
+    # Ds = [2,5,10,20,40,100]
+    Ds = [2,10,100]
+    Ns = [2**n for n in range(8,13)]
     data = 'unif_exp'
 
     # DataViz(sample_uniform,OT_exp,500,2,N_sampling=500,fun = codpy_OT)
 
-    # file_OTT = nn_estimation_rate(sample_uniform, OT_exp, Ns, Ds, data=data, fun=OTT, method_name="OTT")
-    # file_POT = nn_estimation_rate(sample_uniform, OT_exp, Ns, Ds, data=data, fun=POT, numTrials=1,method_name="POT")
-    # file_COT = nn_estimation_rate(sample_uniform, OT_exp, Ns, Ds, data=data, fun=COT,  method_name="COT")
+    file_POT = nn_estimation_rate(sample_uniform, OT_exp, Ns, Ds, data=data, fun=POT, method_name="POT",numTrials=1)
+    file_COT = nn_estimation_rate(sample_uniform, OT_exp, Ns, Ds, data=data, fun=COT,  method_name="COT",numTrials=1)
+    file_COT_parallel = nn_estimation_rate(sample_uniform, OT_exp, Ns, Ds, data=data, fun=COT_parallel,  method_name="d_COT",numTrials=1)
+    file_OTT = nn_estimation_rate(sample_uniform, OT_exp, Ns, Ds, data=data, fun=OTT, method_name="OTT",numTrials=1)
 
 
     files = files_indir(os.path.dirname(os.path.realpath(__file__)),".pkl")
